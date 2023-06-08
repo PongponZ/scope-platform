@@ -1,6 +1,26 @@
 version: '3.8'
 services:
   mysql:
-    image: mysql
+    image: mysql:8.0.31
     container_name: mysql
-  
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - 3306:3306
+    networks:
+      - scope-network
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+    restart: always
+  redis:
+    container_name: redis  
+    image: redis:alpine3.16
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - 6379:6379
+    networks:
+      - scope-network
+    restart: always
+networks:
+  scope-network:
+    driver: bridge

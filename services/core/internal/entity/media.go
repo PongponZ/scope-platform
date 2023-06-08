@@ -1,6 +1,8 @@
 package entity
 
-import "mime/multipart"
+import (
+	"mime/multipart"
+)
 
 type MediaFileMeta struct {
 	FileName    string `json:"file_name"`
@@ -32,4 +34,10 @@ type MediaConvertPayload struct {
 type MediaConvertStatus struct {
 	Status  string `json:"status"`
 	Process string `json:"process"`
+}
+
+type MediaUploaded struct {
+	ID        string `json:"id"`
+	Timestamp int64  `json:"time_stamp"`
+	Endpoint  string `json:"endpoint"`
 }

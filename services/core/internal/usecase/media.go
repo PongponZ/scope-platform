@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"strings"
+	"time"
 
 	"github.com/PongponZ/scope-platform/core/internal/entity"
 	"github.com/PongponZ/scope-platform/core/internal/repository"
@@ -17,7 +18,7 @@ type MediaUsecase interface {
 	IsAllowType(meta *entity.MediaFileMeta) error
 	GetConvertStatus(id string) (entity.MediaConvertStatus, error)
 	GetMetaFromBuffer(file *multipart.FileHeader, buffer *multipart.File) *entity.MediaFileMeta
-	UploadVideo(meta *entity.MediaFileMeta, userID string) (string, string, error)
+	UploadVideo(meta *entity.MediaFileMeta, userID string) (*entity.MediaUploaded, error)
 }
 
 type Media struct {
@@ -61,28 +62,32 @@ func (u Media) GetConvertStatus(id string) (entity.MediaConvertStatus, error) {
 	return u.mediaRepository.ConvertStatus(id)
 }
 
-func (u Media) UploadVideo(meta *entity.MediaFileMeta, userID string) (string, string, error) {
+func (u Media) UploadVideo(meta *entity.MediaFileMeta, userID string) (*entity.MediaUploaded, error) {
 	info, err := u.mediaRepository.UploadVideo(meta, userID)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
-	payload := u.mapUploadInfoToMediaConvertPayload(info)
+	payload := u.UploadInfoToMediaConvertJob(info)
 	jsonPayload, _ := json.Marshal(payload)
 
 	if err = u.messageBroker.Publish(u.mediaConvertQueue, jsonPayload); err != nil {
-		return "", "", errors.New(ErrorCannotPublishMediaConvertMessage)
+		return nil, errors.New(ErrorCannotPublishMediaConvertMessage)
 	}
 
 	endpoint := u.CreateMediaEndPoint(info.ID+".m3u8", userID)
-	return info.ID, endpoint, nil
+	return &entity.MediaUploaded{
+		ID:        info.ID,
+		Endpoint:  endpoint,
+		Timestamp: time.Now().Unix(),
+	}, nil
 }
 
 func (u Media) CreateMediaEndPoint(filname string, userID string) string {
 	return fmt.Sprintf("%s/%s/%s", u.mediaDomain, userID, filname)
 }
 
-func (u Media) mapUploadInfoToMediaConvertPayload(info entity.MediaUploadInfo) entity.MediaConvertPayload {
+func (u Media) UploadInfoToMediaConvertJob(info entity.MediaUploadInfo) entity.MediaConvertPayload {
 	return entity.MediaConvertPayload{
 		ID:         info.ID,
 		FileName:   info.Filename,

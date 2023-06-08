@@ -8,7 +8,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func InitMysql(url string) *sql.DB {
+func NewMySQL(url string) *sql.DB {
 	db, err := sql.Open("mysql", url)
 	if err != nil {
 		log.Fatalln(err)
